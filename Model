@@ -1,0 +1,256 @@
+from google.colab import files
+import pandas as pd
+
+# Upload file
+uploaded = files.upload()
+
+# Read the CSV into a DataFrame
+df = pd.read_csv(next(iter(uploaded)))
+df.head()
+
+# sex
+df['sex'] = df['sex'].map({'male': 1, 'female': 0})
+df.head()
+
+#smoker
+df['smoker'] = df['smoker'].map({'yes': 1, 'no': 0})
+df.head()
+
+# region
+region_map = {'southwest': 0, 'southeast': 1, 'northwest': 2, 'northeast': 3}
+df['region'] = df['region'].map(region_map)
+
+df.head()
+
+X = df[['age', 'bmi', 'children', 'sex', 'smoker', 'region']].values.tolist()   # Features (can be multiple)
+y = df['charges'].values.tolist()                   # Target (label)
+
+y = [x / 1000 for x in y]
+
+# Normalizer (y)
+
+from sklearn.preprocessing import MinMaxScaler
+
+scaler = MinMaxScaler()
+df_minmax = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
+
+import numpy as np
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.33, random_state=42)
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from sklearn import datasets, linear_model
+from sklearn.metrics import mean_squared_error, r2_score
+
+regr = linear_model.LinearRegression()
+
+# Train the model using the training sets
+regr.fit(X_train, y_train)
+
+# Make predictions using the testing set
+y_pred = regr.predict(X_test)
+y_pred_train = regr.predict(X_train)
+
+# The mean squared error
+mse_lin = mean_squared_error(y_test, y_pred)
+mse_lin_train = mean_squared_error(y_train, y_pred_train)
+
+print("Mean squared error: %.2f" % mean_squared_error(y_test, y_pred))
+print("Mean squared error: %.2f" % mean_squared_error(y_train, y_pred_train))
+
+from sklearn.tree import DecisionTreeRegressor
+
+decision_tree_model = DecisionTreeRegressor(max_depth=5)
+decision_tree_model.fit(X_train, y_train)
+
+y_pred_dtm = decision_tree_model.predict(X_test)
+y_pred_dtm_train = decision_tree_model.predict(X_train)
+
+mse_dtm = mean_squared_error(y_test, y_pred_dtm)
+mse_dtm_train = mean_squared_error(y_train, y_pred_dtm_train)
+
+print("Mean squared error: %.2f" % mean_squared_error(y_test, y_pred_dtm))
+print("Mean squared error: %.2f" % mean_squared_error(y_train, y_pred_dtm_train))
+
+from sklearn.ensemble import RandomForestRegressor
+random_forest_model = RandomForestRegressor(max_depth=3, n_estimators=18)
+random_forest_model.fit(X_train, y_train)
+
+y_pred_rfm = random_forest_model.predict(X_test)
+y_pred_rfm_train = random_forest_model.predict(X_train)
+
+mse_rfm = mean_squared_error(y_test, y_pred_rfm)
+mse_rfm_train = mean_squared_error(y_train, y_pred_rfm_train)
+
+print("Mean squared error: %.2f" % mean_squared_error(y_test, y_pred_rfm))
+print("Mean squared error: %.2f" % mean_squared_error(y_train, y_pred_rfm_train))
+
+from sklearn.neighbors import KNeighborsRegressor
+neigh = KNeighborsRegressor(n_neighbors=4)
+neigh.fit(X_train, y_train)
+
+y_pred_neigh = neigh.predict(X_test)
+y_pred_neigh_train = neigh.predict(X_train)
+
+mse_neigh = mean_squared_error(y_test, y_pred_neigh)
+mse_neigh_train = mean_squared_error(y_train, y_pred_neigh_train)
+
+print("Mean squared error: %.2f" % mean_squared_error(y_test, y_pred_neigh))
+print("Mean squared error: %.2f" % mean_squared_error(y_train, y_pred_neigh_train))
+
+from sklearn.neural_network import MLPRegressor
+mlp_model = MLPRegressor(hidden_layer_sizes=(150), random_state=1, max_iter=200, tol=0.1)
+mlp_model.fit(X_train, y_train)
+
+y_pred_mlp = mlp_model.predict(X_test)
+y_pred_mlp_train = mlp_model.predict(X_train)
+
+mse_mlp = mean_squared_error(y_test, y_pred_mlp)
+mse_mlp_train = mean_squared_error(y_train, y_pred_mlp_train)
+
+print("Mean squared error: %.2f" % mean_squared_error(y_test, y_pred_mlp))
+print("Mean squared error: %.2f" % mean_squared_error(y_train, y_pred_mlp_train))
+
+ave_y_pred = (y_pred + y_pred_dtm + y_pred_neigh + y_pred_rfm + y_pred_mlp)/5
+print("Mean squared error: %.2f" % mean_squared_error(y_test, ave_y_pred))
+
+ave_y_pred_train = (y_pred_dtm_train + y_pred_train + y_pred_mlp_train + y_pred_neigh_train + y_pred_rfm_train)/5
+print("Mean squared error: %.2f" % mean_squared_error(y_train, ave_y_pred_train))
+
+test_sum = 1/(mse_lin + 0.1e5) + 1/(mse_dtm + 0.1e5) + 1/(mse_rfm + 0.1e5) + 1/(mse_neigh + 0.1e5) + 1/(mse_mlp + 0.1e5)
+
+train_sum = 1/(mse_lin_train + 0.1e5) + 1/(mse_dtm_train + 0.1e5) + 1/(mse_rfm_train + 0.1e5) + 1/(mse_neigh_train + 0.1e5) + 1/(mse_mlp_train + 0.1e5)
+
+w_linear = (1/mse_lin + 0.1e5)/test_sum
+w_dtm = (1/mse_dtm + 0.1e5)/test_sum
+w_rfm = (1/mse_rfm + 0.1e5)/test_sum
+w_neigh = (1/mse_neigh + 0.1e5)/test_sum
+w_mlp = (1/mse_mlp + 0.1e5)/test_sum
+
+print(w_linear, w_dtm, w_rfm, w_neigh, w_mlp)
+print(w_linear + w_dtm + w_rfm + w_neigh + w_mlp)
+
+w_linear_train = (1/mse_lin_train + 0.1e5)/train_sum
+w_dtm_train = 1/(mse_dtm_train + 0.1e5)/(train_sum + 0.1e5)
+w_rfm_train = (1/mse_rfm_train + 0.1e5)/train_sum
+w_neigh_train = (1/mse_neigh_train + 0.1e5)/train_sum
+w_mlp_train = (1/mse_mlp_train + 0.1e5)/train_sum
+
+print(w_linear_train, w_dtm_train, w_rfm_train, w_neigh_train, w_mlp_train)
+print(w_linear_train + w_dtm_train + w_rfm_train + w_neigh_train + w_mlp_train)
+
+weighted_predictions_test = (w_linear * y_pred) + (w_dtm * y_pred_dtm) + (w_rfm * y_pred_rfm) + (w_neigh * y_pred_neigh) + (w_mlp * y_pred_mlp)
+print("Mean squared error: %.2f" % mean_squared_error(y_test, weighted_predictions_test))
+
+weighted_predictions_train = (w_linear_train * y_pred_train) + (w_dtm_train * y_pred_dtm_train) + (w_rfm_train * y_pred_rfm_train) + (w_neigh_train * y_pred_neigh_train) + (w_mlp_train * y_pred_mlp_train)
+print("Mean squared error: %.2f" % mean_squared_error(y_train, weighted_predictions_train))
+
+# Initializes all of the wieghts to the same "unbiased" value
+weight_lin = 1/5
+weight_dtm = 1/5
+weight_rfm = 1/5
+weight_neigh = 1/5
+weight_mlp = 1/5
+
+# Uses a for loop, in order to readjust each weight based on the information given by each trial.
+for i in range(len(y_test)):
+  # Establishes a measuring tool, each error value is the difference between the prediction and the true value
+  error_lin = abs(y_pred[i] - y_test[i])
+  error_dtm = abs(y_pred_dtm[i] - y_test[i])
+  error_rfm = abs(y_pred_rfm[i] - y_test[i])
+  error_neigh = abs(y_pred_neigh[i] - y_test[i])
+  error_mlp = abs(y_pred_mlp[i] - y_test[i])
+
+  # Adjusts the weight in order to "bias" the models (adds 0.9^3 in order to avoid deviding by zero)
+  weight_lin = weight_lin/(error_lin + 0.9**3)
+  weight_dtm = weight_dtm/(error_dtm + 0.9**3)
+  weight_rfm = weight_rfm/(error_rfm + 0.9**3)
+  weight_neigh = weight_neigh/(error_neigh + 0.9**3)
+  weight_mlp = weight_mlp/(error_mlp + 0.9**3)
+
+  weight_sum = weight_lin + weight_dtm + weight_rfm + weight_neigh + weight_mlp
+  weight_averager = 1/weight_sum
+
+  weight_lin = weight_lin/weight_sum
+  weight_dtm = weight_dtm/weight_sum
+  weight_rfm = weight_rfm/weight_sum
+  weight_neigh = weight_neigh/weight_sum
+  weight_mlp = weight_mlp/weight_sum
+
+print(weight_lin, weight_dtm, weight_rfm, weight_neigh, weight_mlp)
+
+import matplotlib.pyplot as plt
+
+# Initializes all of the weights to the same "unbiased" value
+weight_lin = 1/5
+weight_dtm = 1/5
+weight_rfm = 1/5
+weight_neigh = 1/5
+weight_mlp = 1/5
+
+# Lists to store weight values over iterations
+w_lin_hist = []
+w_dtm_hist = []
+w_rfm_hist = []
+w_neigh_hist = []
+w_mlp_hist = []
+
+for i in range(len(y_test)):
+    # Measure absolute error of each model
+    error_lin = abs(y_pred[i] - y_test[i])
+    error_dtm = abs(y_pred_dtm[i] - y_test[i])
+    error_rfm = abs(y_pred_rfm[i] - y_test[i])
+    error_neigh = abs(y_pred_neigh[i] - y_test[i])
+    error_mlp = abs(y_pred_mlp[i] - y_test[i])
+
+    # Update weights
+    weight_lin = weight_lin / (error_lin + 0.9**3)
+    weight_dtm = weight_dtm / (error_dtm + 0.9**3)
+    weight_rfm = weight_rfm / (error_rfm + 0.9**3)
+    weight_neigh = weight_neigh / (error_neigh + 0.9**3)
+    weight_mlp = weight_mlp / (error_mlp + 0.9**3)
+
+    # Normalize weights
+    weight_sum = weight_lin + weight_dtm + weight_rfm + weight_neigh + weight_mlp
+
+    weight_lin /= weight_sum
+    weight_dtm /= weight_sum
+    weight_rfm /= weight_sum
+    weight_neigh /= weight_sum
+    weight_mlp /= weight_sum
+
+    # Store updated weights
+    w_lin_hist.append(weight_lin)
+    w_dtm_hist.append(weight_dtm)
+    w_rfm_hist.append(weight_rfm)
+    w_neigh_hist.append(weight_neigh)
+    w_mlp_hist.append(weight_mlp)
+
+# Print final weights
+print(weight_lin, weight_dtm, weight_rfm, weight_neigh, weight_mlp)
+
+# ---- LIMIT TO FIRST 100 INDICES ----
+max_idx = 100
+w_lin_hist = w_lin_hist[:max_idx]
+w_dtm_hist = w_dtm_hist[:max_idx]
+w_rfm_hist = w_rfm_hist[:max_idx]
+w_neigh_hist = w_neigh_hist[:max_idx]
+w_mlp_hist = w_mlp_hist[:max_idx]
+
+# ---- PLOT ----
+plt.figure(figsize=(12, 6))
+plt.plot(w_lin_hist, label="Linear Regr Weight")
+plt.plot(w_dtm_hist, label="Decision Tree Weight")
+plt.plot(w_rfm_hist, label="Random Forest Weight")
+plt.plot(w_neigh_hist, label="kNN Weight")
+plt.plot(w_mlp_hist, label="MLP Weight")
+
+plt.xlabel("Iteration (Weights)")
+plt.ylabel("Weight Value")
+plt.title("Evolution of Model Weights (Iterations)")
+plt.legend()
+plt.grid(True)
+plt.show()
